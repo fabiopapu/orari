@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Turni Settimanali</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f2f2f2; }
+    h2 { text-align: center; }
+    .selector { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+    select { padding: 10px; font-size: 16px; border-radius: 8px; }
+    table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 10px; overflow: hidden; }
+    th, td { padding: 10px; text-align: center; border-bottom: 1px solid #ddd; font-size: 15px; }
+    th { background: #222; color: #fff; }
+    .blu { background: #cfe3ff; }
+    .giallo { background: #fff4b8; }
+    .verde { background: #caffc8; }
+    .normale { background: #ffffff; }
+@media (max-width: 600px) {
+  body { padding: 10px; }
+  th, td { padding: 8px; font-size: 14px; }
+  select { font-size: 14px; padding: 8px; }
+  table { font-size: 14px; display: block; overflow-x: auto; }
+}
+
+  </style>
+</head>
+<body>
+<h2>Turni Settimanali</h2>
+
+<div class="selector">
+  <select id="nomeSelect">
+    <option value="">Seleziona Nome</option>
+    <option value="claudia">Claudia Trevisan</option>
+    <option value="fabio">Papurello Fabio</option>
+    <option value="chiara">Chiara Zaccurri</option>
+    <option value="marco">Marco Battistioli</option>
+  </select>
+
+  <select id="settimanaSelect">
+    <option value="1">Settimana 1</option>
+    <option value="2">Settimana 2</option>
+ <option value="3">Settimana 3</option>
+<option value="4">Settimana 4</option>
+  </select>
+</div>
+
+<table id="tabella">
+  <thead>
+    <tr>
+      <th>Giorno</th>
+      <th>Ore</th>
+      <th>Dettaglio</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
+
+<script>
+const giorni = ["L", "M", "M2", "G", "V", "S", "D"];
+const nomiGiorni = { L:"Lunedì", M:"Martedì", M2:"Mercoledì", G:"Giovedì", V:"Venerdì", S:"Sabato", D:"Domenica" };
+
+const turni = {
+  claudia: {
+    1: {
+      L:{ore:"4,75",colore:"blu",det:"Mattino 07:30-12:15"},
+      M:{ore:"4,75",colore:"blu",det:"Mattino 07:30-12:15"},
+      M2:{ore:"4,75",colore:"blu",det:"Mattino 07:30-12:15"},
+      G:{ore:"R",colore:"verde",det:"Riposo"},
+      V:{ore:"4,75",colore:"blu",det:"Mattino 07:30-12:15"},
+      S:{ore:"4,75",colore:"blu",det:"Mattino 07:30-12:15"},
+      D:{ore:"4,75",colore:"blu",det:"Mattino 07:30-12:15"}
+    },
+    2:{
+      L:{ore:"4,75",colore:"blu",det:"Mattino 07:30-12:15"},
+      M:{ore:"4,75",colore:"blu",det:"Mattino 07:30-12:15"},
+      M2:{ore:"4,75",colore:"blu",det:"Mattino 07:30-12:15"},
+      G:{ore:"R",colore:"verde",det:"Riposo"},
+      V:{ore:"4,75",colore:"blu",det:"Mattino 07:30-12:15"},
+      S:{ore:"4,75",colore:"blu",det:"Mattino 07:30-12:15"},
+      D:{ore:"4,75",colore:"blu",det:"Mattino 07:30-12:15"}
+    },
+3:{
+      L:{ore:"4,75",colore:"blu",det:"Mattino 07:30-12:15"},
+      M:{ore:"4,75",colore:"blu",det:"Mattino 07:30-12:15"},
+      M2:{ore:"4,75",colore:"blu",det:"Mattino 07:30-12:15"},
+      G:{ore:"R",colore:"verde",det:"Riposo"},
+      V:{ore:"4,75",colore:"blu",det:"Mattino 07:30-12:15"},
+      S:{ore:"4,75",colore:"blu",det:"Mattino 07:30-12:15"},
+      D:{ore:"4,75",colore:"blu",det:"Mattino 07:30-12:15"}
+    },
+4:{
+      L:{ore:"4,75",colore:"blu",det:"Mattino 07:30-12:15"},
+      M:{ore:"4,75",colore:"blu",det:"Mattino 07:30-12:15"},
+      M2:{ore:"4,75",colore:"blu",det:"Mattino 07:30-12:15"},
+      G:{ore:"R",colore:"verde",det:"Riposo"},
+      V:{ore:"4,75",colore:"blu",det:"Mattino 07:30-12:15"},
+      S:{ore:"4,75",colore:"blu",det:"Mattino 07:30-12:15"},
+      D:{ore:"4,75",colore:"blu",det:"Mattino 07:30-12:15"}
+    }
+  },
+  fabio: {
+    1: {
+      L:{ore:"2,00",colore:"normale",det:"Turno fisso 14-16"},
+      M:{ore:"2,00",colore:"normale",det:"Turno fisso 14-16"},
+      M2:{ore:"2,00",colore:"normale",det:"Turno fisso 14-16"},
+      G:{ore:"4,75",colore:"blu",det:"Sostituzione Claudia 07:30-12:15 + pulizie 14:00-16:00"},
+      V:{ore:"R",colore:"verde",det:"Riposo"},
+      S:{ore:"12,00",colore:"blu",det:"Sostituzione Chiara (08:00-14:00) e Marco 16:00-20:00 + pulizie 14:00-16:00"},
+      D:{ore:"2,00",colore:"normale",det:"Turno fisso 14-16"}
+    },
+    2: {
+      L:{ore:"2,00",colore:"normale",det:"Turno fisso 14-16"},
+      M:{ore:"2,00",colore:"normale",det:"Turno fisso 14-16"},
+      M2:{ore:"2,00",colore:"normale",det:"Turno fisso 14-16"},
+      G:{ore:"4,75",colore:"blu",det:"Sostituzione Claudia 07:30-12:15 + pulizie 14:00-16:00"},
+      V:{ore:"R",colore:"verde",det:"Riposo"},
+      S:{ore:"8,00",colore:"blu",det:"Sostituzione Chiara 8:00-14:00 + pulizie 14:00-16:00"},
+      D:{ore:"6,00",colore:"blu",det:"Turno fisso 14-16+Sostituzione Marco 16:00-20:00"}
+    },
+3: {
+      L:{ore:"2,00",colore:"normale",det:"Turno fisso 14-16"},
+      M:{ore:"2,00",colore:"normale",det:"Turno fisso 14-16"},
+      M2:{ore:"2,00",colore:"normale",det:"Turno fisso 14-16"},
+      G:{ore:"4,75",colore:"blu",det:"Sostituzione Claudia 07:30-12:15 + pulizie 14:00-16:00"},
+      V:{ore:"R",colore:"verde",det:"Riposo"},
+      S:{ore:"8,00",colore:"blu",det:"Sostituzione Chiara 8:00-14:00 + pulizie 14:00-16:00"},
+      D:{ore:"2,00",colore:"normale",det:"Turno fisso 14-16"}
+    },
+4: {
+      L:{ore:"6,00",colore:"blu",det:"Turno fisso 14-16 +sostituzione Marco 14-16"},
+      M:{ore:"2,00",colore:"normale",det:"Turno fisso 14-16"},
+      M2:{ore:"2,00",colore:"normale",det:"Turno fisso 14-16"},
+      G:{ore:"4,75",colore:"blu",det:"Sostituzione Claudia 07:30-12:15 + pulizie 14:00-16:00"},
+      V:{ore:"R",colore:"verde",det:"Riposo"},
+      S:{ore:"8,00",colore:"blu",det:"Sostituzione Chiara 8:00-14:00 + pulizie 14:00-16:00"},
+      D:{ore:"2,00",colore:"normale",det:"Turno fisso 14-16"}
+    }
+
+  },
+  chiara: {
+    1: {
+      L:{ore:"6,00",colore:"giallo",det:"08:00-14:00"},
+      M:{ore:"6,00",colore:"giallo",det:"08:00-14:00"},
+      M2:{ore:"6,00",colore:"giallo",det:"08:00-14:00"},
+      G:{ore:"6,00",colore:"giallo",det:"08:00-14:00"},
+      V:{ore:"8,00",colore:"blu",det: "08:00-14:00 +Pulizie 14:00-16:00 sostituzione Fabio"},
+      S:{ore:"R",colore:"verde",det:"Riposo"}, // Fabio la sostituisce
+      D:{ore:"6,00",colore:"giallo",det:"08:00-14:00"}
+    },
+    2: {
+      L:{ore:"6,00",colore:"giallo",det:"08:00-14:00"},
+      M:{ore:"6,00",colore:"giallo",det:"08:00-14:00"},
+      M2:{ore:"6,00",colore:"giallo",det:"08:00-14:00"},
+      G:{ore:"6,00",colore:"giallo",det:"08:00-14:00"},
+      V:{ore:"8,00",colore:"blu",det:"08:00-14:00 + Pulizie 14:00-16:00 sostituzione Fabio"},
+      S:{ore:"R",colore:"verde",det:"Riposo"}, // Fabio la sostituisce
+      D:{ore:"6,00",colore:"giallo",det:"08:00-14:00"}
+    },
+ 3: {
+      L:{ore:"6,00",colore:"giallo",det:"08:00-14:00"},
+      M:{ore:"6,00",colore:"giallo",det:"08:00-14:00"},
+      M2:{ore:"6,00",colore:"giallo",det:"08:00-14:00"},
+      G:{ore:"6,00",colore:"giallo",det:"08:00-14:00"},
+      V:{ore:"8,00",colore:"blu",det:"08:00-14:00 + Pulizie 14:00-16:00 sostituzione Fabio"},
+      S:{ore:"R",colore:"verde",det:"Riposo"}, // Fabio la sostituisce
+      D:{ore:"6,00",colore:"giallo",det:"08:00-14:00"}
+    },
+4: {
+      L:{ore:"6,00",colore:"giallo",det:"08:00-14:00"},
+      M:{ore:"6,00",colore:"giallo",det:"08:00-14:00"},
+      M2:{ore:"6,00",colore:"giallo",det:"08:00-14:00"},
+      G:{ore:"6,00",colore:"giallo",det:"08:00-14:00"},
+      V:{ore:"8,00",colore:"blu",det:"08:00-14:00 + Pulizie 14:00-16:00 sostituzione Fabio"},
+      S:{ore:"R",colore:"verde",det:"Riposo"}, // Fabio la sostituisce
+      D:{ore:"6,00",colore:"giallo",det:"08:00-14:00"}
+    }
+  },
+  marco: {
+    1: {
+      L:{ore:"4,00",colore:"giallo",det:"16:00-20:00"},
+      M:{ore:"4,00",colore:"giallo",det:"16:00-20:00"},
+      M2:{ore:"4,00",colore:"giallo",det:"16:00-20:00"},
+      G:{ore:"4,00",colore:"giallo",det:"16:00-20:00"},
+      V:{ore:"4,00",colore:"giallo",det:"16:00-20:00"},
+      S:{ore:"R",colore:"verde",det:"Riposo"}, // Fabio lo sostituisce
+      D:{ore:"4,00",colore:"giallo",det:"16:00-20:00"}
+    },
+    2: {
+      L:{ore:"4,00",colore:"giallo",det:"16:00-20:00"},
+      M:{ore:"4,00",colore:"giallo",det:"16:00-20:00"},
+      M2:{ore:"4,00",colore:"giallo",det:"16:00-20:00"},
+      G:{ore:"4,00",colore:"giallo",det:"16:00-20:00"},
+      V:{ore:"4,00",colore:"giallo",det:"16:00-20:00"},
+      S:{ore:"4,00",colore:"giallo",det:"16:00-20:00"},
+      D:{ore:"R",colore:"verde",det:"Riposo"} // Fabio lo sostituisce
+    },
+
+ 3: {
+      L:{ore:"4,00",colore:"giallo",det:"16:00-20:00"},
+      M:{ore:"4,00",colore:"giallo",det:"16:00-20:00"},
+      M2:{ore:"4,00",colore:"giallo",det:"16:00-20:00"},
+      G:{ore:"4,00",colore:"giallo",det:"16:00-20:00"},
+      V:{ore:"4,00",colore:"giallo",det:"16:00-20:00"},
+      S:{ore:"4,00",colore:"giallo",det:"16:00-20:00"},
+      D:{ore:"4,00",colore:"giallo",det:"16:00-20:00"}
+    },
+
+
+ 4: {
+      L:{ore:"R",colore:"verde",det:"Riposo"}, // Fabio lo sostituisce
+      M:{ore:"4,00",colore:"giallo",det:"16:00-20:00"},
+      M2:{ore:"4,00",colore:"giallo",det:"16:00-20:00"},
+      G:{ore:"4,00",colore:"giallo",det:"16:00-20:00"},
+      V:{ore:"4,00",colore:"giallo",det:"16:00-20:00"},
+      S:{ore:"4,00",colore:"giallo",det:"16:00-20:00"},
+      D:{ore:"4,00",colore:"giallo",det:"16:00-20:00"}
+    },
+
+  }
+};
+
+function aggiornaTabella() {
+  const nome = document.getElementById("nomeSelect").value;
+  const settimana = document.getElementById("settimanaSelect").value;
+  const tbody = document.querySelector("tbody");
+  tbody.innerHTML = "";
+  if (!nome || !settimana) return;
+
+  giorni.forEach(g => {
+    const t = turni[nome][settimana][g];
+    const tr = document.createElement("tr");
+    tr.className = t.colore;
+    tr.innerHTML = `<td>${nomiGiorni[g]}</td><td>${t.ore}</td><td>${t.det}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+document.getElementById("nomeSelect").addEventListener("change", aggiornaTabella);
+document.getElementById("settimanaSelect").addEventListener("change", aggiornaTabella);
+</script>
+</body>
+</html>
