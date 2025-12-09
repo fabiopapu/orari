@@ -1,33 +1,31 @@
-
 <!DOCTYPE html>
 <html lang="it">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Turni Settimanali Modificabili</title>
-<style>
-body { font-family: Arial, sans-serif; margin:0; padding:20px; background:#f2f2f2; }
-h2 { text-align:center; }
-.selector { display:flex; flex-direction:column; gap:10px; margin-bottom:20px; }
-select, button { padding:10px; font-size:16px; border-radius:8px; }
-table { width:100%; border-collapse: collapse; background:#fff; border-radius:10px; overflow:hidden; }
-th, td { padding:10px; text-align:center; border-bottom:1px solid #ddd; font-size:15px; }
-th { background:#222; color:#fff; }
-.blu { background:#cfe3ff; }
-.giallo { background:#fff4b8; }
-.verde { background:#caffc8; }
-.normale { background:#ffffff; }
-td[contenteditable="true"] { background: #f9f9f9; cursor:text; }
-@media (max-width:600px){
-  body{padding:10px;}
-  th, td{padding:8px; font-size:14px;}
-  select, button{font-size:14px; padding:8px;}
-  table{display:block; overflow-x:auto;}
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Turni Settimanali</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f2f2f2; }
+    h2 { text-align: center; }
+    .selector { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+    select { padding: 10px; font-size: 16px; border-radius: 8px; }
+    table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 10px; overflow: hidden; }
+    th, td { padding: 10px; text-align: center; border-bottom: 1px solid #ddd; font-size: 15px; }
+    th { background: #222; color: #fff; }
+    .blu { background: #cfe3ff; }
+    .giallo { background: #fff4b8; }
+    .verde { background: #caffc8; }
+    .normale { background: #ffffff; }
+@media (max-width: 600px) {
+  body { padding: 10px; }
+  th, td { padding: 8px; font-size: 14px; }
+  select { font-size: 14px; padding: 8px; }
+  table { font-size: 14px; display: block; overflow-x: auto; }
 }
-</style>
+  </style>
 </head>
 <body>
-<h2>Turni Settimanali Modificabili</h2>
+<h2>Turni Settimanali</h2>
 
 <div class="selector">
   <select id="nomeSelect">
@@ -44,10 +42,6 @@ td[contenteditable="true"] { background: #f9f9f9; cursor:text; }
     <option value="3">Settimana 3</option>
     <option value="4">Settimana 4</option>
   </select>
-
-  <button id="resetBtn">Reset ai default</button>
-  <button id="downloadBtn">Scarica Backup JSON</button>
-  <input type="file" id="uploadFile" style="margin-top:10px;">
 </div>
 
 <table id="tabella">
@@ -61,101 +55,60 @@ td[contenteditable="true"] { background: #f9f9f9; cursor:text; }
   <tbody></tbody>
 </table>
 
-<script>
-// --- Dati default ---
-const defaultTurni = {
-  claudia: {
-    1:{L:{ore:"4,75",colore:"blu",det:"Mattino 07:30-12:15"}, M:{ore:"4,75",colore:"blu",det:"Mattino 07:30-12:15"}, M2:{ore:"4,75",colore:"blu",det:"Mattino 07:30-12:15"}, G:{ore:"R",colore:"verde",det:"Riposo"}, V:{ore:"4,75",colore:"blu",det:"Mattino 07:30-12:15"}, S:{ore:"4,75",colore:"blu",det:"Mattino 07:30-12:15"}, D:{ore:"4,75",colore:"blu",det:"Mattino 07:30-12:15"}},
-    2:{L:{ore:"4,75",colore:"blu",det:"Mattino 07:30-12:15"}, M:{ore:"4,75",colore:"blu",det:"Mattino 07:30-12:15"}, M2:{ore:"4,75",colore:"blu",det:"Mattino 07:30-12:15"}, G:{ore:"R",colore:"verde",det:"Riposo"}, V:{ore:"4,75",colore:"blu",det:"Mattino 07:30-12:15"}, S:{ore:"4,75",colore:"blu",det:"Mattino 07:30-12:15"}, D:{ore:"4,75",colore:"blu",det:"Mattino 07:30-12:15"}},
-    3:{L:{ore:"4,75",colore:"blu",det:"Mattino 07:30-12:15"}, M:{ore:"4,75",colore:"blu",det:"Mattino 07:30-12:15"}, M2:{ore:"4,75",colore:"blu",det:"Mattino 07:30-12:15"}, G:{ore:"R",colore:"verde",det:"Riposo"}, V:{ore:"4,75",colore:"blu",det:"Mattino 07:30-12:15"}, S:{ore:"4,75",colore:"blu",det:"Mattino 07:30-12:15"}, D:{ore:"4,75",colore:"blu",det:"Mattino 07:30-12:15"}},
-    4:{L:{ore:"4,75",colore:"blu",det:"Mattino 07:30-12:15"}, M:{ore:"4,75",colore:"blu",det:"Mattino 07:30-12:15"}, M2:{ore:"4,75",colore:"blu",det:"Mattino 07:30-12:15"}, G:{ore:"R",colore:"verde",det:"Riposo"}, V:{ore:"4,75",colore:"blu",det:"Mattino 07:30-12:15"}, S:{ore:"4,75",colore:"blu",det:"Mattino 07:30-12:15"}, D:{ore:"4,75",colore:"blu",det:"Mattino 07:30-12:15"}}
-  },
-  fabio: {}, // dati vuoti
-  chiara: {}, // dati vuoti
-  marco: {}  // dati vuoti
-};
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
-// --- Giorni ---
-const giorni = ["L","M","M2","G","V","S","D"];
+<script>
+const giorni = ["L", "M", "M2", "G", "V", "S", "D"];
 const nomiGiorni = { L:"Lunedì", M:"Martedì", M2:"Mercoledì", G:"Giovedì", V:"Venerdì", S:"Sabato", D:"Domenica" };
 
-// --- Carica dati da localStorage o default ---
-let turni = JSON.parse(localStorage.getItem("turni")) || JSON.parse(JSON.stringify(defaultTurni));
+let turni = {}; // dati caricati da Firestore
 
-// --- Funzione aggiorna tabella ---
+// Config Firebase (metti i tuoi dati qui)
+const firebaseConfig = {
+  apiKey: "APIKEY",
+  authDomain: "PROJECT.firebaseapp.com",
+  projectId: "PROJECT",
+  storageBucket: "PROJECT.appspot.com",
+  messagingSenderId: "SENDERID",
+  appId: "APPID"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+// Funzione per caricare i dati da Firestore
+async function caricaTurni() {
+  const snapshot = await db.collection("turni").get();
+  snapshot.forEach(doc => {
+    turni[doc.id] = doc.data(); // doc.id deve essere "claudia", "fabio", etc.
+  });
+  aggiornaTabella(); // aggiorna la tabella appena caricato
+}
+
 function aggiornaTabella() {
   const nome = document.getElementById("nomeSelect").value;
   const settimana = document.getElementById("settimanaSelect").value;
   const tbody = document.querySelector("tbody");
   tbody.innerHTML = "";
-  if(!nome || !settimana) return;
-  giorni.forEach(g=>{
-    const t = turni[nome][settimana] && turni[nome][settimana][g] ? turni[nome][settimana][g] : {ore:"", colore:"normale", det:""};
+  if (!nome || !settimana || !turni[nome] || !turni[nome][settimana]) return;
+
+  giorni.forEach(g => {
+    const t = turni[nome][settimana][g];
     const tr = document.createElement("tr");
     tr.className = t.colore;
-    tr.innerHTML = `<td>${nomiGiorni[g]}</td>
-      <td contenteditable="true" data-g="${g}" data-field="ore">${t.ore}</td>
-      <td contenteditable="true" data-g="${g}" data-field="det">${t.det}</td>`;
+    tr.innerHTML = `<td>${nomiGiorni[g]}</td><td>${t.ore}</td><td>${t.det}</td>`;
     tbody.appendChild(tr);
   });
 }
 
-// --- Eventi modifica celle ---
-document.querySelector("tbody").addEventListener("input", e=>{
-  if(e.target.dataset.g && e.target.dataset.field){
-    const nome = document.getElementById("nomeSelect").value;
-    const settimana = document.getElementById("settimanaSelect").value;
-    const g = e.target.dataset.g;
-    const field = e.target.dataset.field;
-    if(!turni[nome][settimana]) turni[nome][settimana] = {};
-    if(!turni[nome][settimana][g]) turni[nome][settimana][g] = {ore:"", colore:"normale", det:""};
-    turni[nome][settimana][g][field] = e.target.innerText;
-    localStorage.setItem("turni", JSON.stringify(turni));
-  }
-});
-
-// --- Eventi select ---
 document.getElementById("nomeSelect").addEventListener("change", aggiornaTabella);
 document.getElementById("settimanaSelect").addEventListener("change", aggiornaTabella);
 
-// --- Reset ai default ---
-document.getElementById("resetBtn").addEventListener("click", ()=>{
-  if(confirm("Sei sicuro di resettare ai valori di default?")){
-    turni = JSON.parse(JSON.stringify(defaultTurni));
-    localStorage.setItem("turni", JSON.stringify(turni));
-    aggiornaTabella();
-  }
-});
-
-// --- Scarica backup ---
-document.getElementById("downloadBtn").addEventListener("click", ()=>{
-  const blob = new Blob([JSON.stringify(turni, null, 2)], {type:"application/json"});
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = "turni_backup.json";
-  a.click();
-});
-
-// --- Carica backup ---
-document.getElementById("uploadFile").addEventListener("change", e=>{
-  const file = e.target.files[0];
-  if(!file) return;
-  const reader = new FileReader();
-  reader.onload = ()=> {
-    try{
-      turni = JSON.parse(reader.result);
-      localStorage.setItem("turni", JSON.stringify(turni));
-      aggiornaTabella();
-      alert("Backup caricato con successo!");
-    }catch(err){
-      alert("Errore nel file JSON!");
-    }
-  };
-  reader.readAsText(file);
-});
-
-// --- Inizializza tabella ---
-aggiornaTabella();
+// carico subito i dati
+caricaTurni();
 </script>
 </body>
 </html>
+
