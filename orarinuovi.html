@@ -8,7 +8,7 @@
 body { font-family: Arial, sans-serif; margin:0; padding:20px; background:#f2f2f2; }
 h2 { text-align:center; }
 .selector { display:flex; flex-direction:column; gap:10px; margin-bottom:20px; }
-select, button { padding:10px; font-size:16px; border-radius:8px; }
+select, button, input { padding:10px; font-size:16px; border-radius:8px; }
 table { width:100%; border-collapse: collapse; background:#fff; border-radius:10px; overflow:hidden; }
 th, td { padding:10px; text-align:center; border-bottom:1px solid #ddd; font-size:15px; }
 th { background:#222; color:#fff; }
@@ -18,19 +18,27 @@ th { background:#222; color:#fff; }
 .normale { background:#ffffff; }
 td[contenteditable="true"] { background: #f9f9f9; cursor:text; }
 td[contenteditable="false"] { background: #f2f2f2; cursor:not-allowed; }
+.login-box { display:flex; gap:10px; margin-bottom:20px; align-items:center; justify-content:center; }
 @media (max-width:600px){
   body{padding:10px;}
   th, td{padding:8px; font-size:14px;}
-  select, button{font-size:14px; padding:8px;}
+  select, button, input{font-size:14px; padding:8px;}
   table{display:block; overflow-x:auto;}
+  .login-box{flex-direction:column;}
 }
 </style>
 </head>
 <body>
 <h2>Turni Settimanali Modificabili</h2>
 
+<div class="login-box">
+  <input type="email" id="email" placeholder="Email">
+  <input type="password" id="password" placeholder="Password">
+  <button id="loginBtn">Login</button>
+  <span id="loginStatus"></span>
+</div>
+
 <div class="selector">
-  <button onclick="login()">Login</button>
   <select id="nomeSelect">
     <option value="">Seleziona Nome</option>
     <option value="claudia">Claudia Trevisan</option>
@@ -80,22 +88,25 @@ let canEdit = false;
 
 // --- DATI DEFAULT ---
 const defaultTurni = {
-  claudia: { /* come nel tuo codice originale */ }
+  claudia: { /* inserisci qui come nel tuo codice originale */ }
 };
 const giorni = ["L","M","M2","G","V","S","D"];
 const nomiGiorni = { L:"Lunedì", M:"Martedì", M2:"Mercoledì", G:"Giovedì", V:"Venerdì", S:"Sabato", D:"Domenica" };
 
 // --- LOGIN ---
-async function login(){
-  const email = prompt("Inserisci la tua email");
-  const password = prompt("Inserisci la password");
+document.getElementById("loginBtn").addEventListener("click", async () => {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+  const status = document.getElementById("loginStatus");
   try{
     await signInWithEmailAndPassword(auth, email, password);
-    alert("Login avvenuto con successo!");
+    status.textContent = "Login effettuato!";
+    status.style.color = "green";
   }catch(e){
-    alert("Errore login: "+e.message);
+    status.textContent = "Errore: " + e.message;
+    status.style.color = "red";
   }
-}
+});
 
 // --- CONTROLLO STATO AUTENTICAZIONE ---
 onAuthStateChanged(auth, user=>{
