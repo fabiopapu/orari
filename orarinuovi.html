@@ -8,7 +8,7 @@
 body { font-family: Arial, sans-serif; margin:0; padding:20px; background:#f2f2f2; }
 h2 { text-align:center; }
 .selector { display:flex; flex-direction:column; gap:10px; margin-bottom:20px; }
-select, button { padding:10px; font-size:16px; border-radius:8px; }
+select, button, input { padding:10px; font-size:16px; border-radius:8px; }
 table { width:100%; border-collapse: collapse; background:#fff; border-radius:10px; overflow:hidden; }
 th, td { padding:10px; text-align:center; border-bottom:1px solid #ddd; font-size:15px; }
 th { background:#222; color:#fff; }
@@ -17,10 +17,11 @@ th { background:#222; color:#fff; }
 .verde { background:#caffc8; }
 .normale { background:#ffffff; }
 td[contenteditable="true"] { background: #f9f9f9; cursor:text; }
+td[contenteditable="false"] { background: #f2f2f2; cursor:not-allowed; }
 @media (max-width:600px){
   body{padding:10px;}
   th, td{padding:8px; font-size:14px;}
-  select, button{font-size:14px; padding:8px;}
+  select, button, input{font-size:14px; padding:8px;}
   table{display:block; overflow-x:auto;}
 }
 </style>
@@ -29,6 +30,7 @@ td[contenteditable="true"] { background: #f9f9f9; cursor:text; }
 <h2>Turni Settimanali Modificabili</h2>
 
 <div class="selector">
+  <input type="password" id="passInput" placeholder="Inserisci password per modificare">
   <select id="nomeSelect">
     <option value="">Seleziona Nome</option>
     <option value="claudia">Claudia Trevisan</option>
@@ -43,8 +45,6 @@ td[contenteditable="true"] { background: #f9f9f9; cursor:text; }
     <option value="3">Settimana 3</option>
     <option value="4">Settimana 4</option>
   </select>
-
-  <button id="resetBtn">Reset ai default</button>
 </div>
 
 <table id="tabella">
@@ -88,6 +88,10 @@ const defaultTurni = {
 const giorni = ["L","M","M2","G","V","S","D"];
 const nomiGiorni = { L:"Lunedì", M:"Martedì", M2:"Mercoledì", G:"Giovedì", V:"Venerdì", S:"Sabato", D:"Domenica" };
 
+// --- PASSWORD ---
+const PASSWORD = "orari2025"; // modifica qui la password
+let canEdit = false;
+
 // --- AGGIORNA TABELLA ---
 async function aggiornaTabella(){
   const nome = document.getElementById("nomeSelect").value;
@@ -96,7 +100,6 @@ async function aggiornaTabella(){
   tbody.innerHTML = "";
   if(!nome || !settimana) return;
 
-  // leggi dal DB
   const docRef = doc(db, "turni", `${nome}_${settimana}`);
   const docSnap = await getDoc(docRef);
   let dati = docSnap.exists() ? docSnap.data() : defaultTurni[nome] && defaultTurni[nome][settimana] ? defaultTurni[nome][settimana] : {};
@@ -106,14 +109,21 @@ async function aggiornaTabella(){
     const tr = document.createElement("tr");
     tr.className = t.colore;
     tr.innerHTML = `<td>${nomiGiorni[g]}</td>
-      <td contenteditable="true" data-g="${g}" data-field="ore">${t.ore}</td>
-      <td contenteditable="true" data-g="${g}" data-field="det">${t.det}</td>`;
+      <td contenteditable="${canEdit}" data-g="${g}" data-field="ore">${t.ore}</td>
+      <td contenteditable="${canEdit}" data-g="${g}" data-field="det">${t.det}</td>`;
     tbody.appendChild(tr);
   });
 }
 
+// --- EVENTO PASSWORD ---
+document.getElementById("passInput").addEventListener("input", e=>{
+  canEdit = e.target.value === PASSWORD;
+  aggiornaTabella();
+});
+
 // --- SALVA MODIFICHE ---
 document.querySelector("tbody").addEventListener("input", async e=>{
+  if(!canEdit) return;
   if(e.target.dataset.g && e.target.dataset.field){
     const nome = document.getElementById("nomeSelect").value;
     const settimana = document.getElementById("settimanaSelect").value;
@@ -125,9 +135,7 @@ document.querySelector("tbody").addEventListener("input", async e=>{
     let dati = docSnap.exists() ? docSnap.data() : {};
     if(!dati[g]) dati[g] = {ore:"", colore:"normale", det:""};
     dati[g][field] = e.target.innerText;
-
-    // set automatico del colore base (opzionale)
-    dati[g].colore = (g==="G" && e.target.dataset.field==="ore" && e.target.innerText==="R") ? "verde" : "normale";
+    dati[g].colore = (g==="G" && field==="ore" && e.target.innerText==="R") ? "verde" : "normale";
 
     await setDoc(docRef, dati);
     e.target.parentElement.className = dati[g].colore;
@@ -137,18 +145,6 @@ document.querySelector("tbody").addEventListener("input", async e=>{
 // --- EVENTI SELECT ---
 document.getElementById("nomeSelect").addEventListener("change", aggiornaTabella);
 document.getElementById("settimanaSelect").addEventListener("change", aggiornaTabella);
-
-// --- RESET ---
-document.getElementById("resetBtn").addEventListener("click", async ()=>{
-  if(!confirm("Sei sicuro di resettare ai valori di default?")) return;
-  const nome = document.getElementById("nomeSelect").value;
-  const settimana = document.getElementById("settimanaSelect").value;
-  if(!nome || !settimana) return;
-  const docRef = doc(db, "turni", `${nome}_${settimana}`);
-  let dati = defaultTurni[nome] && defaultTurni[nome][settimana] ? defaultTurni[nome][settimana] : {};
-  await setDoc(docRef, dati);
-  aggiornaTabella();
-});
 
 // --- INIT ---
 aggiornaTabella();
