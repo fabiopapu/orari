@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="it">
 <head>
@@ -46,8 +45,6 @@ td[contenteditable="true"] { background: #f9f9f9; cursor:text; }
   </select>
 
   <button id="resetBtn">Reset ai default</button>
-  <button id="downloadBtn">Scarica Backup JSON</button>
-  <input type="file" id="uploadFile" style="margin-top:10px;">
 </div>
 
 <table id="tabella">
@@ -60,38 +57,49 @@ td[contenteditable="true"] { background: #f9f9f9; cursor:text; }
   </thead>
   <tbody></tbody>
 </table>
+
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.30.0/firebase-app.js";
-import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/9.30.0/firebase-firestore.js";
+// --- FIREBASE ---
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
-// --- Config Firebase ---
 const firebaseConfig = {
-  apiKey: "LA_TUA_APIKEY",
-  authDomain: "TUO_DOMINIO.firebaseapp.com",
-  projectId: "ID_PROGETTO",
-  storageBucket: "ID_PROGETTO.appspot.com",
-  messagingSenderId: "SENDER_ID",
-  appId: "APP_ID"
+  apiKey: "AIzaSyCrZ940PGhcIN_c-hOXzNbHD2IN_f9mJ5k",
+  authDomain: "orari-1b540.firebaseapp.com",
+  projectId: "orari-1b540",
+  storageBucket: "orari-1b540.firebasestorage.app",
+  messagingSenderId: "211635713784",
+  appId: "1:211635713784:web:41953c7af3ff9be0da6d0d"
 };
-
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// --- Giorni ---
+// --- DATI DEFAULT ---
+const defaultTurni = {
+  claudia: {
+    1:{L:{ore:"4,75", colore:"blu", det:"Mattino 07:30-12:15"}, M:{ore:"4,75", colore:"blu", det:"Mattino 07:30-12:15"}, M2:{ore:"4,75", colore:"blu", det:"Mattino 07:30-12:15"}, G:{ore:"R", colore:"verde", det:"Riposo"}, V:{ore:"4,75", colore:"blu", det:"Mattino 07:30-12:15"}, S:{ore:"4,75", colore:"blu", det:"Mattino 07:30-12:15"}, D:{ore:"4,75", colore:"blu", det:"Mattino 07:30-12:15"}},
+    2:{L:{ore:"4,75", colore:"blu", det:"Mattino 07:30-12:15"}, M:{ore:"4,75", colore:"blu", det:"Mattino 07:30-12:15"}, M2:{ore:"4,75", colore:"blu", det:"Mattino 07:30-12:15"}, G:{ore:"R", colore:"verde", det:"Riposo"}, V:{ore:"4,75", colore:"blu", det:"Mattino 07:30-12:15"}, S:{ore:"4,75", colore:"blu", det:"Mattino 07:30-12:15"}, D:{ore:"4,75", colore:"blu", det:"Mattino 07:30-12:15"}},
+    3:{L:{ore:"4,75", colore:"blu", det:"Mattino 07:30-12:15"}, M:{ore:"4,75", colore:"blu", det:"Mattino 07:30-12:15"}, M2:{ore:"4,75", colore:"blu", det:"Mattino 07:30-12:15"}, G:{ore:"R", colore:"verde", det:"Riposo"}, V:{ore:"4,75", colore:"blu", det:"Mattino 07:30-12:15"}, S:{ore:"4,75", colore:"blu", det:"Mattino 07:30-12:15"}, D:{ore:"4,75", colore:"blu", det:"Mattino 07:30-12:15"}},
+    4:{L:{ore:"4,75", colore:"blu", det:"Mattino 07:30-12:15"}, M:{ore:"4,75", colore:"blu", det:"Mattino 07:30-12:15"}, M2:{ore:"4,75", colore:"blu", det:"Mattino 07:30-12:15"}, G:{ore:"R", colore:"verde", det:"Riposo"}, V:{ore:"4,75", colore:"blu", det:"Mattino 07:30-12:15"}, S:{ore:"4,75", colore:"blu", det:"Mattino 07:30-12:15"}, D:{ore:"4,75", colore:"blu", det:"Mattino 07:30-12:15"}}
+  }
+};
+
+// --- GIORNI ---
 const giorni = ["L","M","M2","G","V","S","D"];
 const nomiGiorni = { L:"Lunedì", M:"Martedì", M2:"Mercoledì", G:"Giovedì", V:"Venerdì", S:"Sabato", D:"Domenica" };
 
-// --- Funzione aggiorna tabella ---
-async function aggiornaTabella() {
+// --- AGGIORNA TABELLA ---
+async function aggiornaTabella(){
   const nome = document.getElementById("nomeSelect").value;
   const settimana = document.getElementById("settimanaSelect").value;
   const tbody = document.querySelector("tbody");
   tbody.innerHTML = "";
   if(!nome || !settimana) return;
 
-  const docRef = doc(db, "turni", nome);
+  // leggi dal DB
+  const docRef = doc(db, "turni", `${nome}_${settimana}`);
   const docSnap = await getDoc(docRef);
-  const dati = docSnap.exists() ? docSnap.data()[`settimana${settimana}`] : {};
+  let dati = docSnap.exists() ? docSnap.data() : defaultTurni[nome] && defaultTurni[nome][settimana] ? defaultTurni[nome][settimana] : {};
 
   giorni.forEach(g=>{
     const t = dati[g] || {ore:"", colore:"normale", det:""};
@@ -104,33 +112,48 @@ async function aggiornaTabella() {
   });
 }
 
-// --- Salva modifiche su Firebase ---
+// --- SALVA MODIFICHE ---
 document.querySelector("tbody").addEventListener("input", async e=>{
-  if(!e.target.dataset.g || !e.target.dataset.field) return;
-  const nome = document.getElementById("nomeSelect").value;
-  const settimana = document.getElementById("settimanaSelect").value;
-  const giorno = e.target.dataset.g;
-  const field = e.target.dataset.field;
+  if(e.target.dataset.g && e.target.dataset.field){
+    const nome = document.getElementById("nomeSelect").value;
+    const settimana = document.getElementById("settimanaSelect").value;
+    const g = e.target.dataset.g;
+    const field = e.target.dataset.field;
 
-  const docRef = doc(db, "turni", nome);
-  const docSnap = await getDoc(docRef);
-  let dati = docSnap.exists() ? docSnap.data() : {};
-  if(!dati[`settimana${settimana}`]) dati[`settimana${settimana}`] = {};
-  if(!dati[`settimana${settimana}`][giorno]) dati[`settimana${settimana}`][giorno] = {ore:"", colore:"normale", det:""};
+    const docRef = doc(db, "turni", `${nome}_${settimana}`);
+    const docSnap = await getDoc(docRef);
+    let dati = docSnap.exists() ? docSnap.data() : {};
+    if(!dati[g]) dati[g] = {ore:"", colore:"normale", det:""};
+    dati[g][field] = e.target.innerText;
 
-  dati[`settimana${settimana}`][giorno][field] = e.target.innerText;
+    // set automatico del colore base (opzionale)
+    dati[g].colore = (g==="G" && e.target.dataset.field==="ore" && e.target.innerText==="R") ? "verde" : "normale";
 
-  await setDoc(docRef, dati);
+    await setDoc(docRef, dati);
+    e.target.parentElement.className = dati[g].colore;
+  }
 });
 
-// --- Eventi select ---
+// --- EVENTI SELECT ---
 document.getElementById("nomeSelect").addEventListener("change", aggiornaTabella);
 document.getElementById("settimanaSelect").addEventListener("change", aggiornaTabella);
 
-// Inizializza
-aggiornaTabella();
-</script>
+// --- RESET ---
+document.getElementById("resetBtn").addEventListener("click", async ()=>{
+  if(!confirm("Sei sicuro di resettare ai valori di default?")) return;
+  const nome = document.getElementById("nomeSelect").value;
+  const settimana = document.getElementById("settimanaSelect").value;
+  if(!nome || !settimana) return;
+  const docRef = doc(db, "turni", `${nome}_${settimana}`);
+  let dati = defaultTurni[nome] && defaultTurni[nome][settimana] ? defaultTurni[nome][settimana] : {};
+  await setDoc(docRef, dati);
+  aggiornaTabella();
+});
 
+// --- INIT ---
+aggiornaTabella();
+
+</script>
 </body>
 </html>
 
