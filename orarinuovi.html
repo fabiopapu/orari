@@ -1,31 +1,33 @@
+
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Turni Settimanali</title>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f2f2f2; }
-    h2 { text-align: center; }
-    .selector { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
-    select { padding: 10px; font-size: 16px; border-radius: 8px; }
-    table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 10px; overflow: hidden; }
-    th, td { padding: 10px; text-align: center; border-bottom: 1px solid #ddd; font-size: 15px; }
-    th { background: #222; color: #fff; }
-    .blu { background: #cfe3ff; }
-    .giallo { background: #fff4b8; }
-    .verde { background: #caffc8; }
-    .normale { background: #ffffff; }
-@media (max-width: 600px) {
-  body { padding: 10px; }
-  th, td { padding: 8px; font-size: 14px; }
-  select { font-size: 14px; padding: 8px; }
-  table { font-size: 14px; display: block; overflow-x: auto; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Turni Settimanali Modificabili</title>
+<style>
+body { font-family: Arial, sans-serif; margin:0; padding:20px; background:#f2f2f2; }
+h2 { text-align:center; }
+.selector { display:flex; flex-direction:column; gap:10px; margin-bottom:20px; }
+select, button { padding:10px; font-size:16px; border-radius:8px; }
+table { width:100%; border-collapse: collapse; background:#fff; border-radius:10px; overflow:hidden; }
+th, td { padding:10px; text-align:center; border-bottom:1px solid #ddd; font-size:15px; }
+th { background:#222; color:#fff; }
+.blu { background:#cfe3ff; }
+.giallo { background:#fff4b8; }
+.verde { background:#caffc8; }
+.normale { background:#ffffff; }
+td[contenteditable="true"] { background: #f9f9f9; cursor:text; }
+@media (max-width:600px){
+  body{padding:10px;}
+  th, td{padding:8px; font-size:14px;}
+  select, button{font-size:14px; padding:8px;}
+  table{display:block; overflow-x:auto;}
 }
-  </style>
+</style>
 </head>
 <body>
-<h2>Turni Settimanali</h2>
+<h2>Turni Settimanali Modificabili</h2>
 
 <div class="selector">
   <select id="nomeSelect">
@@ -42,6 +44,10 @@
     <option value="3">Settimana 3</option>
     <option value="4">Settimana 4</option>
   </select>
+
+  <button id="resetBtn">Reset ai default</button>
+  <button id="downloadBtn">Scarica Backup JSON</button>
+  <input type="file" id="uploadFile" style="margin-top:10px;">
 </div>
 
 <table id="tabella">
@@ -54,61 +60,77 @@
   </thead>
   <tbody></tbody>
 </table>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.30.0/firebase-app.js";
+import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/9.30.0/firebase-firestore.js";
 
-<!-- Firebase -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-
-<script>
-const giorni = ["L", "M", "M2", "G", "V", "S", "D"];
-const nomiGiorni = { L:"Lunedì", M:"Martedì", M2:"Mercoledì", G:"Giovedì", V:"Venerdì", S:"Sabato", D:"Domenica" };
-
-let turni = {}; // dati caricati da Firestore
-
-// Config Firebase (metti i tuoi dati qui)
+// --- Config Firebase ---
 const firebaseConfig = {
-  apiKey: "APIKEY",
-  authDomain: "PROJECT.firebaseapp.com",
-  projectId: "PROJECT",
-  storageBucket: "PROJECT.appspot.com",
-  messagingSenderId: "SENDERID",
-  appId: "APPID"
+  apiKey: "LA_TUA_APIKEY",
+  authDomain: "TUO_DOMINIO.firebaseapp.com",
+  projectId: "ID_PROGETTO",
+  storageBucket: "ID_PROGETTO.appspot.com",
+  messagingSenderId: "SENDER_ID",
+  appId: "APP_ID"
 };
 
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
-// Funzione per caricare i dati da Firestore
-async function caricaTurni() {
-  const snapshot = await db.collection("turni").get();
-  snapshot.forEach(doc => {
-    turni[doc.id] = doc.data(); // doc.id deve essere "claudia", "fabio", etc.
-  });
-  aggiornaTabella(); // aggiorna la tabella appena caricato
-}
+// --- Giorni ---
+const giorni = ["L","M","M2","G","V","S","D"];
+const nomiGiorni = { L:"Lunedì", M:"Martedì", M2:"Mercoledì", G:"Giovedì", V:"Venerdì", S:"Sabato", D:"Domenica" };
 
-function aggiornaTabella() {
+// --- Funzione aggiorna tabella ---
+async function aggiornaTabella() {
   const nome = document.getElementById("nomeSelect").value;
   const settimana = document.getElementById("settimanaSelect").value;
   const tbody = document.querySelector("tbody");
   tbody.innerHTML = "";
-  if (!nome || !settimana || !turni[nome] || !turni[nome][settimana]) return;
+  if(!nome || !settimana) return;
 
-  giorni.forEach(g => {
-    const t = turni[nome][settimana][g];
+  const docRef = doc(db, "turni", nome);
+  const docSnap = await getDoc(docRef);
+  const dati = docSnap.exists() ? docSnap.data()[`settimana${settimana}`] : {};
+
+  giorni.forEach(g=>{
+    const t = dati[g] || {ore:"", colore:"normale", det:""};
     const tr = document.createElement("tr");
     tr.className = t.colore;
-    tr.innerHTML = `<td>${nomiGiorni[g]}</td><td>${t.ore}</td><td>${t.det}</td>`;
+    tr.innerHTML = `<td>${nomiGiorni[g]}</td>
+      <td contenteditable="true" data-g="${g}" data-field="ore">${t.ore}</td>
+      <td contenteditable="true" data-g="${g}" data-field="det">${t.det}</td>`;
     tbody.appendChild(tr);
   });
 }
 
+// --- Salva modifiche su Firebase ---
+document.querySelector("tbody").addEventListener("input", async e=>{
+  if(!e.target.dataset.g || !e.target.dataset.field) return;
+  const nome = document.getElementById("nomeSelect").value;
+  const settimana = document.getElementById("settimanaSelect").value;
+  const giorno = e.target.dataset.g;
+  const field = e.target.dataset.field;
+
+  const docRef = doc(db, "turni", nome);
+  const docSnap = await getDoc(docRef);
+  let dati = docSnap.exists() ? docSnap.data() : {};
+  if(!dati[`settimana${settimana}`]) dati[`settimana${settimana}`] = {};
+  if(!dati[`settimana${settimana}`][giorno]) dati[`settimana${settimana}`][giorno] = {ore:"", colore:"normale", det:""};
+
+  dati[`settimana${settimana}`][giorno][field] = e.target.innerText;
+
+  await setDoc(docRef, dati);
+});
+
+// --- Eventi select ---
 document.getElementById("nomeSelect").addEventListener("change", aggiornaTabella);
 document.getElementById("settimanaSelect").addEventListener("change", aggiornaTabella);
 
-// carico subito i dati
-caricaTurni();
+// Inizializza
+aggiornaTabella();
 </script>
+
 </body>
 </html>
 
