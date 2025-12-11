@@ -7,7 +7,7 @@
 <style>
 body { font-family: Arial, sans-serif; margin:0; padding:20px; background:#f2f2f2; }
 h2 { text-align:center; }
-.selector { display:flex; flex-direction:column; gap:10px; margin-bottom:20px; }
+.selector, .admin-box { display:flex; flex-direction:column; gap:10px; margin-bottom:20px; }
 select, button, input { padding:10px; font-size:16px; border-radius:8px; }
 table { width:100%; border-collapse: collapse; background:#fff; border-radius:10px; overflow:hidden; }
 th, td { padding:10px; text-align:center; border-bottom:1px solid #ddd; font-size:15px; }
@@ -19,12 +19,15 @@ th { background:#222; color:#fff; }
 td[contenteditable="true"] { background: #f9f9f9; cursor:text; }
 td[contenteditable="false"] { background: #f2f2f2; cursor:not-allowed; }
 .login-box { display:flex; gap:10px; margin-bottom:20px; align-items:center; justify-content:center; }
+.admin-box { display:none; padding:10px; background:#eee; border-radius:10px; }
+.admin-box h3 { margin:0; margin-bottom:10px; }
+.admin-box table { margin-bottom:20px; }
 @media (max-width:600px){
   body{padding:10px;}
   th, td{padding:8px; font-size:14px;}
   select, button, input{font-size:14px; padding:8px;}
   table{display:block; overflow-x:auto;}
-  .login-box{flex-direction:column;}
+  .login-box, .admin-box{flex-direction:column;}
 }
 </style>
 </head>
@@ -39,12 +42,12 @@ td[contenteditable="false"] { background: #f2f2f2; cursor:not-allowed; }
 </div>
 
 <div class="selector">
+  <select id="strutturaSelect">
+    <option value="">Seleziona Struttura</option>
+  </select>
+
   <select id="nomeSelect">
     <option value="">Seleziona Nome</option>
-    <option value="claudia">Claudia Trevisan</option>
-    <option value="fabio">Papurello Fabio</option>
-    <option value="chiara">Chiara Zaccurri</option>
-    <option value="marco">Marco Battistioli</option>
   </select>
 
   <select id="settimanaSelect">
@@ -52,6 +55,7 @@ td[contenteditable="false"] { background: #f2f2f2; cursor:not-allowed; }
     <option value="2">Settimana 2</option>
     <option value="3">Settimana 3</option>
     <option value="4">Settimana 4</option>
+    <option value="5">Settimana 5</option>
   </select>
 </div>
 
@@ -66,10 +70,29 @@ td[contenteditable="false"] { background: #f2f2f2; cursor:not-allowed; }
   <tbody></tbody>
 </table>
 
+<div class="admin-box" id="adminBox">
+  <h3>Gestione Strutture</h3>
+  <input type="text" id="nuovaStruttura" placeholder="Nuova struttura">
+  <button id="aggiungiStrutturaBtn">Aggiungi struttura</button>
+  <table id="struttureTable">
+    <thead><tr><th>Struttura</th><th>Modifica</th><th>Elimina</th></tr></thead>
+    <tbody></tbody>
+  </table>
+
+  <h3>Gestione Utenti</h3>
+  <input type="text" id="nuovoUtente" placeholder="Nome utente">
+  <select id="utenteStrutturaSelect"></select>
+  <button id="aggiungiUtenteBtn">Aggiungi utente</button>
+  <table id="utentiTable">
+    <thead><tr><th>Utente</th><th>Struttura</th><th>Modifica</th><th>Elimina</th></tr></thead>
+    <tbody></tbody>
+  </table>
+</div>
+
 <script type="module">
 // --- FIREBASE ---
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+import { getFirestore, doc, setDoc, getDoc, collection, addDoc, getDocs, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
 
 const firebaseConfig = {
@@ -85,13 +108,9 @@ const db = getFirestore(app);
 const auth = getAuth(app);
 
 let canEdit = false;
-
-// --- DATI DEFAULT ---
-const defaultTurni = {
-  claudia: { /* inserisci qui come nel tuo codice originale */ }
-};
 const giorni = ["L","M","M2","G","V","S","D"];
 const nomiGiorni = { L:"Lunedì", M:"Martedì", M2:"Mercoledì", G:"Giovedì", V:"Venerdì", S:"Sabato", D:"Domenica" };
+const defaultTurni = {}; // sempre vuoto, compilabile dall’utente
 
 // --- LOGIN ---
 document.getElementById("loginBtn").addEventListener("click", async () => {
@@ -108,9 +127,12 @@ document.getElementById("loginBtn").addEventListener("click", async () => {
   }
 });
 
-// --- CONTROLLO STATO AUTENTICAZIONE ---
-onAuthStateChanged(auth, user=>{
+// --- CONTROLLO AUTENTICAZIONE ---
+onAuthStateChanged(auth, async user => {
   canEdit = !!user;
+  document.getElementById("adminBox").style.display = canEdit ? "block" : "none";
+  await inizializzaStrutture();
+  await caricaUtenti();
   aggiornaTabella();
 });
 
@@ -118,13 +140,13 @@ onAuthStateChanged(auth, user=>{
 async function aggiornaTabella(){
   const nome = document.getElementById("nomeSelect").value;
   const settimana = document.getElementById("settimanaSelect").value;
-  const tbody = document.querySelector("tbody");
-  tbody.innerHTML = "";
+  const tbody = document.querySelector("#tabella tbody");
+  tbody.innerHTML="";
   if(!nome || !settimana) return;
 
-  const docRef = doc(db, "turni", `${nome}_${settimana}`);
+  const docRef = doc(db,"turni",`${nome}_${settimana}`);
   const docSnap = await getDoc(docRef);
-  let dati = docSnap.exists() ? docSnap.data() : defaultTurni[nome] && defaultTurni[nome][settimana] ? defaultTurni[nome][settimana] : {};
+  let dati = docSnap.exists() ? docSnap.data() : defaultTurni[nome]?.[settimana] || {};
 
   giorni.forEach(g=>{
     const t = dati[g] || {ore:"", colore:"normale", det:""};
@@ -138,34 +160,131 @@ async function aggiornaTabella(){
 }
 
 // --- SALVA MODIFICHE ---
-document.querySelector("tbody").addEventListener("input", async e=>{
+document.querySelector("#tabella tbody").addEventListener("input", async e=>{
   if(!canEdit) return;
-  if(e.target.dataset.g && e.target.dataset.field){
-    const nome = document.getElementById("nomeSelect").value;
-    const settimana = document.getElementById("settimanaSelect").value;
-    const g = e.target.dataset.g;
-    const field = e.target.dataset.field;
-
-    const docRef = doc(db, "turni", `${nome}_${settimana}`);
-    const docSnap = await getDoc(docRef);
-    let dati = docSnap.exists() ? docSnap.data() : {};
-    if(!dati[g]) dati[g] = {ore:"", colore:"normale", det:""};
-    dati[g][field] = e.target.innerText;
-    dati[g].colore = (g==="G" && field==="ore" && e.target.innerText==="R") ? "verde" : "normale";
-
-    await setDoc(docRef, dati);
-    e.target.parentElement.className = dati[g].colore;
-  }
+  const { g, field } = e.target.dataset;
+  if(!g || !field) return;
+  const nome = document.getElementById("nomeSelect").value;
+  const settimana = document.getElementById("settimanaSelect").value;
+  const docRef = doc(db,"turni",`${nome}_${settimana}`);
+  const docSnap = await getDoc(docRef);
+  let dati = docSnap.exists() ? docSnap.data() : {};
+  if(!dati[g]) dati[g] = {ore:"", colore:"normale", det:""};
+  dati[g][field] = e.target.innerText;
+  dati[g].colore = (g==="G" && field==="ore" && e.target.innerText==="R")?"verde":"normale";
+  await setDoc(docRef,dati);
+  e.target.parentElement.className = dati[g].colore;
 });
 
 // --- EVENTI SELECT ---
 document.getElementById("nomeSelect").addEventListener("change", aggiornaTabella);
 document.getElementById("settimanaSelect").addEventListener("change", aggiornaTabella);
+document.getElementById("strutturaSelect").addEventListener("change", async ()=>{
+  await caricaUtenti();
+  aggiornaTabella();
+});
 
-// --- INIT ---
-aggiornaTabella();
+// --- INIZIALIZZA STRUTTURE ---
+async function inizializzaStrutture(){
+  const snap = await getDocs(collection(db,"strutture"));
+  if(snap.empty){
+    const strutture = ["introd","morgex","sarre","saint-pierre"];
+    for(const s of strutture) await addDoc(collection(db,"strutture"), {nome:s});
+  }
+  caricaStrutture();
+}
 
+// --- CARICA STRUTTURE ---
+async function caricaStrutture(){
+  const select = document.getElementById("strutturaSelect");
+  const utSelect = document.getElementById("utenteStrutturaSelect");
+  select.innerHTML = "<option value=''>Seleziona Struttura</option>";
+  utSelect.innerHTML = "";
+  const tbody = document.querySelector("#struttureTable tbody");
+  tbody.innerHTML="";
+  const snap = await getDocs(collection(db,"strutture"));
+  snap.forEach(docu=>{
+    const val = docu.data().nome;
+    select.innerHTML += `<option value="${val}">${val}</option>`;
+    utSelect.innerHTML += `<option value="${val}">${val}</option>`;
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${val}</td>
+      <td><button onclick="modificaStruttura('${docu.id}','${val}')">Modifica</button></td>
+      <td><button onclick="eliminaStruttura('${docu.id}')">Elimina</button></td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+// --- GESTIONE UTENTI ---
+async function caricaUtenti(){
+  const tbody = document.querySelector("#utentiTable tbody");
+  tbody.innerHTML="";
+  const snap = await getDocs(collection(db,"utenti"));
+  const nomeSelect = document.getElementById("nomeSelect");
+  const strutturaSelezionata = document.getElementById("strutturaSelect").value;
+  nomeSelect.innerHTML = "<option value=''>Seleziona Nome</option>";
+
+  snap.forEach(docu=>{
+    const data = docu.data();
+    // Tabella admin
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${data.nome}</td><td>${data.struttura}</td>
+      <td><button onclick="modificaUtente('${docu.id}','${data.nome}','${data.struttura}')">Modifica</button></td>
+      <td><button onclick="eliminaUtente('${docu.id}')">Elimina</button></td>`;
+    tbody.appendChild(tr);
+
+    // Select utenti filtrata per struttura selezionata
+    if(!strutturaSelezionata || data.struttura===strutturaSelezionata){
+      nomeSelect.innerHTML += `<option value="${data.nome}">${data.nome}</option>`;
+    }
+  });
+}
+
+// --- MODIFICA / ELIMINA STRUTTURE ---
+window.modificaStruttura = async (id, oldVal)=>{
+  const newVal = prompt("Nuovo nome struttura", oldVal);
+  if(!newVal) return;
+  await updateDoc(doc(db,"strutture",id), {nome:newVal});
+  caricaStrutture();
+  caricaUtenti();
+};
+window.eliminaStruttura = async id=>{
+  if(!confirm("Confermi eliminazione struttura?")) return;
+  await deleteDoc(doc(db,"strutture",id));
+  caricaStrutture();
+  caricaUtenti();
+};
+document.getElementById("aggiungiStrutturaBtn").addEventListener("click", async ()=>{
+  const val = document.getElementById("nuovaStruttura").value;
+  if(!val) return alert("Inserisci nome struttura");
+  await addDoc(collection(db,"strutture"), {nome:val});
+  document.getElementById("nuovaStruttura").value="";
+  caricaStrutture();
+});
+
+// --- MODIFICA / ELIMINA UTENTI ---
+window.modificaUtente = async (id, oldNome, oldStruttura)=>{
+  const newNome = prompt("Nuovo nome utente", oldNome);
+  if(!newNome) return;
+  const newStruttura = prompt("Nuova struttura", oldStruttura);
+  if(!newStruttura) return;
+  await updateDoc(doc(db,"utenti",id), {nome:newNome,struttura:newStruttura});
+  caricaUtenti();
+  caricaStrutture();
+};
+window.eliminaUtente = async id=>{
+  if(!confirm("Confermi eliminazione utente?")) return;
+  await deleteDoc(doc(db,"utenti",id));
+  caricaUtenti();
+};
+document.getElementById("aggiungiUtenteBtn").addEventListener("click", async ()=>{
+  const nome = document.getElementById("nuovoUtente").value;
+  const struttura = document.getElementById("utenteStrutturaSelect").value;
+  if(!nome || !struttura) return alert("Inserisci utente e struttura");
+  await addDoc(collection(db,"utenti"), {nome,struttura});
+  document.getElementById("nuovoUtente").value="";
+  caricaUtenti();
+});
 </script>
 </body>
 </html>
-
